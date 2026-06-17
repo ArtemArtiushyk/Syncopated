@@ -2,12 +2,17 @@ from customtkinter import *
 import CTkListbox as l
 from tkfilebrowser import askopenfilenames
 from mutagen import *
-
+import vlc
 
 class App:
     def __init__(self):
+        self.instance = vlc.Instance()
+        self.player = self.instance.media_player_new()
+        
         self.imported = False
         self.list_pack = False
+
+        self.songs_data = []
 
         self.root = CTk()
         self.root.title("Syncopated")
@@ -22,6 +27,9 @@ class App:
 
         self.import_button = CTkButton(self.menu_frame, text="Import", command=self.importer)
         self.import_button.pack(side=LEFT, fill=Y)
+
+        self.play_selected_button = CTkButton(self.menu_frame, text="Play Selected", command=self.play_selected)
+        self.play_selected_button.pack(side=LEFT, fill=Y)
 
         # list
 
@@ -58,31 +66,39 @@ class App:
 
         self.root.mainloop()
 
-    def song_list(self):
-            # self.songs_list = l.CTkListbox(self.root, width=self.root.winfo_width() // 2, height=self.root.winfo_height() - self.menu.winfo_height())
-        self.songs_data = []
+    def play_selected(self):
+        self.selected = self.songs_list.curselection()
+        if self.selected:
+            self.index = self.selected[0]
+            self.path = self.songs_data[self.index][3]
+            self.media = self.instance.media_new(self.path)
+            self.player.set_media(self.media)
+            self.player.play()
 
+    def song_list(self):
         for self.idx, self.file in enumerate(self.imported):
             self.audio = File(self.file, easy=True)
 
-            self.title = self.audio.get("title", ["Unknown"])[0]
+            print(self.audio)
+
+            self.title  = self.audio.get("title",  ["Unknown"])[0]
             self.artist = self.audio.get("artist", ["Unknown"])[0]
-        
+
+            # Cover fetching
             self.raw = File(self.file)
-            self.cover = None
+            self.cover = False
             for self.tag in self.raw.tags.values():
                 if hasattr(self.tag, "data") and hasattr(self.tag, "mime"):
                     self.cover = self.tag.data
                     break
+            if self.cover is False and hasattr(self.raw, "pictures") and self.raw.pictures:
+                self.cover = self.raw.pictures[0].data
+            if self.cover is False and "covr" in self.raw:
+                self.cover = bytes(self.raw["covr"][0])
 
-            self.songs_data.append((self.title, self.artist, self.cover))
-
-            print(self.songs_data[self.idx][2])
-
-        for i in range(len(self.songs_data)):
-            self.songs_list.insert(len(self.songs_data)+i, f"{self.songs_data[i-1][0]} - {self.songs_data[i-1][1]}", )
-
-    
+            self.songs_data.append((self.audio, self.title, self.artist, self.file))
+        
+            self.songs_list.insert(END, f"{len(self.songs_data)}. {self.title} - {self.artist}")
 
     def importer(self):
         self.dialog = filedialog.askopenfilenames(initialdir="~")
