@@ -111,7 +111,7 @@ class App:
         print(self.config[1])
 
     def apply_config(self):
-        self.
+        return
 
     def save_config(self):
         config = {"theme": self.config[0], "volume": self.config[1], "delay": self.config[2]}
